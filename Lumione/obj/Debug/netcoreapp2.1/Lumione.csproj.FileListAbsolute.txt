@@ -1,0 +1,11 @@
+F:\Development\HTML\Lumione\Lumione\bin\Debug\netcoreapp2.1\Lumione.deps.json
+F:\Development\HTML\Lumione\Lumione\bin\Debug\netcoreapp2.1\Lumione.runtimeconfig.json
+F:\Development\HTML\Lumione\Lumione\bin\Debug\netcoreapp2.1\Lumione.runtimeconfig.dev.json
+F:\Development\HTML\Lumione\Lumione\bin\Debug\netcoreapp2.1\Lumione.dll
+F:\Development\HTML\Lumione\Lumione\bin\Debug\netcoreapp2.1\Lumione.pdb
+F:\Development\HTML\Lumione\Lumione\obj\Debug\netcoreapp2.1\Lumione.csprojAssemblyReference.cache
+F:\Development\HTML\Lumione\Lumione\obj\Debug\netcoreapp2.1\Lumione.csproj.CoreCompileInputs.cache
+F:\Development\HTML\Lumione\Lumione\obj\Debug\netcoreapp2.1\Lumione.AssemblyInfoInputs.cache
+F:\Development\HTML\Lumione\Lumione\obj\Debug\netcoreapp2.1\Lumione.AssemblyInfo.cs
+F:\Development\HTML\Lumione\Lumione\obj\Debug\netcoreapp2.1\Lumione.dll
+F:\Development\HTML\Lumione\Lumione\obj\Debug\netcoreapp2.1\Lumione.pdb

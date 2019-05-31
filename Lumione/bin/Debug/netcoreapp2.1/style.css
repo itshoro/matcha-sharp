@@ -1,0 +1,233 @@
+
+// core
+
+$vp-xsmall: "max-width: 639px";
+$vp-small: "min-width: 640px";
+$vp-medium: "min-width: 960px";
+$vp-large: "min-width: 1280px";
+$vp-xlarge: "min-width: 1600px";
+
+:root {
+	--background: #f2f2f2;
+	--primary-color: hsl(348, 90%, 41%);
+	--hover-color: hsl(348, 91%, 34%);
+	--heading-color: #000;
+	--neutral-color: #727272;
+	--neutral-light-color: #f3f3f3;
+	
+	--margin: 2rem;
+}
+
+@media only screen and ($vp-medium) {
+	:root {
+		--margin: 7rem;
+	}
+}
+
+@media only screen and ($vp-large) {
+	:root {
+		--margin: 15rem;
+	}
+}
+
+@media only screen and ($vp-xlarge) {
+	:root {
+		--margin: 30rem;
+	}
+}
+
+body {
+	background: var(--background);
+	margin: 0;
+	
+	font-family: "Segoe UI";
+}
+
+a {
+	color: var(--primary-color);
+	text-decoration: none;
+	font-weight: 600;
+	position: relative;
+	transition: color 100ms ease-out;
+	--scale: 0;
+	
+	&:hover {
+		--scale: 1;
+		color: var(--hover-color);
+		&::after {
+			background: var(--hover-color);
+		}
+	}
+	
+	&::after {
+		position: absolute;
+		content: "";
+		background: var(--primary-color);
+		width: 100%;
+		height: 2px;
+		bottom: 0;
+		left: 0;
+		transform: scale(var(--scale));
+		transform-origin: 0% 100%;
+		transition: transform 200ms ease-out, background 100ms ease-out;
+	}
+	
+	&.active {
+		color: var(--primary-color);
+		font-weight: bold;
+		border-color: var(--primary-color);
+		
+		&::after {
+			--scale: 1;
+		}
+	}
+}
+
+// nav
+
+
+#burger {
+	display: none;
+	
+	& + .hamburger {
+		height: 20px;
+		width: 35px;
+		position: relative;
+		cursor: pointer;
+		z-index: 999;
+		
+		span {
+			position: absolute;
+			background: var(--heading-color);
+			width: 100%;
+			height: 2px;
+		 	transition: transform 250ms ease-out, width 150ms ease-in, top 150ms ease-out, bottom 150ms ease-out;
+			
+			&:first-of-type {
+				top: 0;
+			}
+			&:last-of-type {
+				bottom: 0;
+			}
+			&:nth-of-type(2) {
+				top: 50%;
+				transform: translateY(-50%);
+			}
+		}
+	}
+}
+#burger:checked {
+	& ~ .hamburger span {		
+		&:first-of-type {
+			top: 50%;
+			transform: rotateZ(45deg) translateY(-50%);
+		}
+		&:nth-of-type(2) {
+			width: 0px;
+		}
+		&:last-of-type {
+			bottom: 50%;
+			transform: rotateZ(-45deg) translateY(50%);
+		}
+	}
+	& ~ .navigation_base {
+		// holds the links
+		height: 100vh;
+		.navigation_base_container {
+			align-items: center;
+			
+			& a {
+				align-items: center;
+				visibility: visible;
+				opacity: 1;
+				transition: 100ms ease-in;
+			}
+		}
+	}
+}
+
+nav {
+	background: var(--background);
+	border-bottom: 1px solid rgba(#393939, 0.28);
+	
+	a {
+		text-transform: capitalize;
+	}
+	
+	display: flex;
+	flex-direction: row-reverse;
+	align-items: center;
+	justify-content: space-between;
+	
+	position: fixed;
+	box-sizing: border-box;
+	padding: 1rem var(--margin);
+	width: 100%;
+}
+
+
+.navigation_base {
+	width: 100%;
+	height: 0;
+	top: 0;
+	left: 0;
+	a {
+		visibility: hidden;
+		opacity: 0;
+		transition: 100ms ease-out;
+		margin: .5em 0;
+	}
+
+	@media only screen and ($vp-xsmall) {
+			background: rgba(255,255,255,0.95); // Background-color on Pull Down
+	}
+	
+	position: fixed;
+	flex: 9999;
+	transition: 250ms height ease-in;
+	&_container {
+		display: flex;
+		width: inherit;
+		height: inherit;
+		flex-direction: column;
+		justify-content: center;
+		align-items: center;
+	}
+}
+
+@media only screen and ($vp-small) {
+	    .navigation_base, #burger ~ .navigation_base, #burger:checked ~ .navigation_base {
+        position: relative;
+        margin-left: 1rem;
+        height: 100%;
+        display: flex;
+    }
+    
+    .navigation_base_container, #burger:checked ~ .navigation_base .navigation_base_container {
+        align-items: center;
+        justify-content: flex-end;
+        padding: 1rem 0;
+        height: inherit;
+        flex-direction: row;
+    }
+
+    #burger ~ .navigation_base .navigation_base_container a {
+        margin: 0 1rem;
+        font-size: small;
+        visibility: visible;
+        opacity: 1;
+        display: inline-block;
+
+        &:last-child {
+            margin-right: 0;
+        }
+    }
+
+    .navigation--filled {
+        color: var(--heading-color);
+    }
+
+    #burger, .hamburger {
+        display: none;
+    }
+}
