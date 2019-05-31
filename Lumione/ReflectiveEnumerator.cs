@@ -2,13 +2,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 
 namespace Lumione
 {
     public static class ReflectiveEnumerator
     {
-        static ReflectiveEnumerator() { }
+        static ReflectiveEnumerator()
+        {
+        }
 
         public static IEnumerable<T> GetEnumerableOfType<T>(params object[] constructorArgs) where T : class
         {

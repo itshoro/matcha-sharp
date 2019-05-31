@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 
 namespace Lumione.Invokers
 {
@@ -10,27 +7,29 @@ namespace Lumione.Invokers
     /// but instead of looking up the "_includes" directory, it looks up files relative to the current file path.
     /// Warning: Include paths containing "." or ".." are not processed.
     /// </summary>
-    public class IncludeRelativeInvoker : IInvoke
+    public class IncludeRelativeInvoker : InvokerBase
     {
-        /*
-         * This pattern works on the following inputs:
-         * {% include test.html %}
-         * {% include dir\test.html %}
-         * {% include some\dir\test.html %}
-         * {% include \some\dir\test.html %}
-         */
-        private const string pattern = @"{%\s*include_relative\s+(?<filePath>(?:\\?(?:\w+\\?)+\.\w+))\s*%}";
-
-        public IncludeRelativeInvoker(SettingsManager settingsManager) : base(settingsManager) { }
-        public override string Invoke(string commentIn, string filePath)
+        public IncludeRelativeInvoker(Settings settings) : base(settings)
         {
-            commentIn = commentIn.Replace("/", @"\");
-            if (Regex.IsMatch(commentIn, pattern))
+            /*
+             * This pattern works on the following inputs:
+             * {% include test.html %}
+             * {% include dir\test.html %}
+             * {% include some\dir\test.html %}
+             * {% include \some\dir\test.html %}
+             */
+            pattern = @"include_relative\s+(?<filePath>(?:\\?(?:\w+\\?)+\.\w+)";
+        }
+
+        public override string Invoke(string command)
+        {
+            command = command.Replace("/", @"\");
+            if (Regex.IsMatch(command, pattern))
             {
-                var match = Regex.Match(commentIn, pattern);
+                var match = Regex.Match(command, pattern);
                 var includePath = match.Groups["filePath"].Value;
 
-                return FindFileContents(filePath, includePath);
+                return FindFileContents(Context.CurrentFilePath, includePath);
             }
             return string.Empty;
         }

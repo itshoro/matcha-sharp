@@ -1,6 +1,6 @@
 ﻿using Lumione.Invokers;
-using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 
@@ -8,65 +8,85 @@ namespace Lumione
 {
     public class Processor
     {
-        private const string commentPattern = @"<!--(.*)-->";
+        private const string commandPattern = @"\<\!\-\-\s*\{\%\s*(?<command>.+)\s*\%\}\s*\-\-\>";
 
+        private Settings settings;
         private IEnumerable<string> FilePaths;
         private List<string> SupportedTypes;
         public int Count { get { return FilePaths.Count(); } }
 
-        public Processor(SettingsManager settings)
+        public Processor(Settings settings)
         {
+            this.settings = settings;
 
             SupportedTypes = new List<string>();
             SupportedTypes.Add("html");
             SupportedTypes.Add("htm");
 
-            FilePaths = AddFiles(settings.BasePath, settings.IgnoredDirectories);
-            FilePaths = FilePaths.Where(s => settings.IgnoredDirectories.Any(dir => !s.StartsWith(dir)));
+            FilePaths = AddFiles(settings.BasePath);
 
-            if (!System.IO.Directory.Exists(settings.BuildPath))
+            if (!Directory.Exists(settings.BuildPath))
             {
-                System.IO.Directory.CreateDirectory(settings.BuildPath);
+                Directory.CreateDirectory(settings.BuildPath);
             }
         }
 
-        private IEnumerable<string> AddFiles(string path, List<string> ignore)
-        {
-            var files = System.IO.Directory.EnumerateFiles(path, "*", System.IO.SearchOption.AllDirectories);
-            return files.Where(s => SupportedTypes.Any(type => type == System.IO.Path.GetExtension(s).Substring(1).ToLower()));
-        }
-
-        public void Invoke(IInvoke invoker, SettingsManager settings)
+        internal void ExecuteCommandsIfPossible()
         {
             foreach (var filePath in FilePaths)
             {
-                var newLines = new List<string>();
-                var lines = System.IO.File.ReadAllLines(filePath);
-                foreach (var line in lines)
+                var fileContents = File.ReadAllText(filePath);
+                var matches = Regex.Matches(fileContents, commandPattern);
+
+                var processedContent = string.Empty;
+
+                if (matches.Count > 0)
                 {
-                    if (ContainsComment(line))
-                    {
-                        newLines.Add(invoker.Invoke(line, filePath));
-                    }
-                    else
-                    {
-                        newLines.Add(line);
-                    }
+                    processedContent = InvokeCommandIfSupported(filePath, fileContents, matches, processedContent);
                 }
 
                 var relativePath = filePath.Remove(0, settings.BasePath.Length);
                 var newPath = settings.BuildPath + relativePath;
-                if (!System.IO.Directory.Exists(System.IO.Path.GetDirectoryName(newPath)))
+                if (!Directory.Exists(Path.GetDirectoryName(newPath)))
                 {
-                    System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(newPath));
+                    Directory.CreateDirectory(Path.GetDirectoryName(newPath));
                 }
-                System.IO.File.WriteAllLines(settings.BuildPath + relativePath, newLines.ToArray());
+                File.WriteAllText(newPath, processedContent == string.Empty ? fileContents : processedContent);
             }
         }
 
-        private bool ContainsComment(string line)
+        private string InvokeCommandIfSupported(string filePath, string fileContents, MatchCollection matches, string processedContent)
         {
-            return Regex.IsMatch(line, commentPattern);
+            var positionInFile = 0;
+            foreach (Match match in matches)
+            {
+                foreach (var invoker in ReflectiveEnumerator.GetEnumerableOfType<InvokerBase>(settings))
+                {
+                    invoker.Context.CurrentFilePath = filePath;
+                    if (invoker.CanInvoke(match.Groups["command"].Value))
+                    {
+                        var prepend = fileContents.Substring(positionInFile, match.Index);
+                        var invokedContent = invoker.Invoke(match.Groups["command"].Value);
+                        positionInFile += match.Index + match.Length;
+
+                        processedContent += prepend + invokedContent;
+                        break;
+                    }
+                }
+            }
+            if (positionInFile < fileContents.Length)
+            {
+                processedContent += fileContents.Substring(positionInFile);
+            }
+
+            return processedContent;
+        }
+
+        private IEnumerable<string> AddFiles(string path)
+        {
+            var files = Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories);
+            files = files.Where(s => SupportedTypes.Any(type => type == Path.GetExtension(s).Substring(1).ToLower()));
+            return files.Where(file => !settings.IgnoredDirectories.Any(directory => file.StartsWith(directory)));
         }
     }
 }

@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 
 namespace Lumione.Invokers
 {
@@ -10,24 +7,21 @@ namespace Lumione.Invokers
     /// This is done by looking up the file path from the given include statement within the directory.
     /// Warning: Include paths containing "." or ".." are not processed.
     /// </summary>
-    public class IncludeInvoker : IInvoke
+    public class IncludeInvoker : InvokerBase
     {
-        /*
-         * This pattern works on the following inputs:
-         * {% include test.html %}
-         * {% include dir\test.html %}
-         * {% include some\dir\test.html %}
-         * {% include \some\dir\test.html %}
-         */
-        private const string pattern = @"{%\s*include\s+(?<filePath>(?:\\?(?:\w+\\?)+\.\w+))\s*%}";
-        
-        private readonly string includeDirectory;
-
-        public IncludeInvoker(SettingsManager settingsManager) : base(settingsManager)
+        public IncludeInvoker(Settings settings) : base(settings)
         {
-            includeDirectory = System.IO.Path.Combine(settingsManager.BasePath, "\\_includes");
+            /*
+             * This pattern works on the following inputs:
+             * {% include test.html %}
+             * {% include dir\test.html %}
+             * {% include some\dir\test.html %}
+             * {% include \some\dir\test.html %}
+             */
+            pattern = @"include\s+(?<filePath>(?:\\?(?:\w+\\?)+\.\w+))";
         }
-        public override string Invoke(string commentIn, string filePath)
+
+        public override string Invoke(string commentIn)
         {
             commentIn = commentIn.Replace("/", @"\");
             if (Regex.IsMatch(commentIn, pattern))
@@ -37,7 +31,7 @@ namespace Lumione.Invokers
 
                 return FindFileContents(includePath);
             }
-            return String.Empty;
+            return string.Empty;
         }
 
         private string FindFileContents(string includePath)
@@ -47,9 +41,9 @@ namespace Lumione.Invokers
                 includePath = "\\" + includePath;
             }
 
-            var combined = System.IO.Path.Combine(includeDirectory + includePath);
+            var combined = System.IO.Path.Combine(settings.IncludePath + includePath);
             var fullPath = System.IO.Path.GetFullPath(combined);
-            return System.IO.File.Exists(fullPath) ? System.IO.File.ReadAllText(fullPath) : String.Empty;
+            return System.IO.File.Exists(fullPath) ? System.IO.File.ReadAllText(fullPath) : string.Empty;
         }
     }
 }

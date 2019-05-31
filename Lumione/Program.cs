@@ -1,30 +1,24 @@
-﻿using Lumione.Invokers;
-using System;
-using System.IO;
+﻿using System;
 
 namespace Lumione
 {
-    class Program
+    internal class Program
     {
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
-            var settings = new SettingsManager(Environment.CurrentDirectory);
+            var settings = new Settings(Environment.CurrentDirectory);
             var processor = new Processor(settings);
 
-            if (processor.Count == 0)
-            {
-                Console.WriteLine("Couldn't act on this path (Project is empty)");
-                return;
-            }
-
+            Console.WriteLine("========");
+            Console.WriteLine("Settings");
+            Console.WriteLine("========");
             Console.WriteLine($"BasePath {settings.BasePath}");
             Console.WriteLine($"BuildPath {settings.BuildPath}");
+            Console.WriteLine($"IncludePath {settings.IncludePath}");
+            Console.WriteLine();
+            Console.WriteLine($"Tracking {processor.Count} files..");
 
-            var invokers = ReflectiveEnumerator.GetEnumerableOfType<IInvoke>();
-            foreach (var invoker in invokers)
-            {
-                processor.Invoke(invoker, settings);
-            }
+            processor.ExecuteCommandsIfPossible();
         }
     }
 }

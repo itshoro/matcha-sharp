@@ -1,27 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
 
 namespace Lumione
 {
-    [Serializable]
-    public class SettingsManager
+    public class Settings
     {
         public string BuildPath { get; private set; }
+        public string IncludePath { get; private set; }
         public string BasePath { get; private set; }
         public List<string> IgnoredDirectories { get; private set; }
-        public SettingsManager(string path)
+
+        public Settings(string path)
         {
             BasePath = path;
             BuildPath = path + @"\_build";
-            BuildPath = path + @"\_includes";
+            IncludePath = path + @"\_includes";
             IgnoredDirectories = new List<string>();
+            IgnoredDirectories.Add(IncludePath);
             IgnoredDirectories.Add(BuildPath);
-        }
-
-        private void Serialize()
-        {
-            throw new NotImplementedException();
         }
     }
 }
