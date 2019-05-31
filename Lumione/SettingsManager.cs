@@ -4,6 +4,7 @@ using System.Text;
 
 namespace Lumione
 {
+    [Serializable]
     public class SettingsManager
     {
         public string BuildPath { get; private set; }
@@ -12,9 +13,15 @@ namespace Lumione
         public SettingsManager(string path)
         {
             BasePath = path;
-            BuildPath = path + @"\build";
+            BuildPath = path + @"\_build";
+            BuildPath = path + @"\_includes";
             IgnoredDirectories = new List<string>();
             IgnoredDirectories.Add(BuildPath);
+        }
+
+        private void Serialize()
+        {
+            throw new NotImplementedException();
         }
     }
 }

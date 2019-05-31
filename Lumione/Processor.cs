@@ -8,17 +8,18 @@ namespace Lumione
 {
     public class Processor
     {
+        private const string commentPattern = @"<!--(.*)-->";
+
         private IEnumerable<string> FilePaths;
         private List<string> SupportedTypes;
         public int Count { get { return FilePaths.Count(); } }
 
         public Processor(SettingsManager settings)
         {
+
             SupportedTypes = new List<string>();
-            SupportedTypes.Add(".html");
-            SupportedTypes.Add(".htm");
-            SupportedTypes.Add(".HTML");
-            SupportedTypes.Add(".dHTM");
+            SupportedTypes.Add("html");
+            SupportedTypes.Add("htm");
 
             FilePaths = AddFiles(settings.BasePath, settings.IgnoredDirectories);
             FilePaths = FilePaths.Where(s => settings.IgnoredDirectories.Any(dir => !s.StartsWith(dir)));
@@ -32,7 +33,7 @@ namespace Lumione
         private IEnumerable<string> AddFiles(string path, List<string> ignore)
         {
             var files = System.IO.Directory.EnumerateFiles(path, "*", System.IO.SearchOption.AllDirectories);
-            return files.Where(s => SupportedTypes.Any(type => type == System.IO.Path.GetExtension(s)));
+            return files.Where(s => SupportedTypes.Any(type => type == System.IO.Path.GetExtension(s).Substring(1).ToLower()));
         }
 
         public void Invoke(IInvoke invoker, SettingsManager settings)
@@ -65,7 +66,7 @@ namespace Lumione
 
         private bool ContainsComment(string line)
         {
-            return Regex.IsMatch(line, @"<!--(.*)-->");
+            return Regex.IsMatch(line, commentPattern);
         }
     }
 }
