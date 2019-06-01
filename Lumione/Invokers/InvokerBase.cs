@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System;
+using System.Text.RegularExpressions;
 
 namespace Lumione.Invokers
 {
@@ -16,6 +17,7 @@ namespace Lumione.Invokers
 
         public virtual bool CanInvoke(string command)
         {
+
             return Regex.IsMatch(command, pattern);
         }
 

@@ -1,4 +1,5 @@
 ﻿using Lumione.Invokers;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -22,12 +23,13 @@ namespace Lumione
             SupportedTypes = new List<string>();
             SupportedTypes.Add("html");
             SupportedTypes.Add("htm");
+            SupportedTypes.Add("css");
 
-            FilePaths = AddFiles(settings.BasePath);
+            FilePaths = AddFiles(settings.SourcePath);
 
-            if (!Directory.Exists(settings.BuildPath))
+            if (!Directory.Exists(settings.DestinationPath))
             {
-                Directory.CreateDirectory(settings.BuildPath);
+                Directory.CreateDirectory(settings.DestinationPath);
             }
         }
 
@@ -45,8 +47,8 @@ namespace Lumione
                     processedContent = InvokeCommandIfSupported(filePath, fileContents, matches, processedContent);
                 }
 
-                var relativePath = filePath.Remove(0, settings.BasePath.Length);
-                var newPath = settings.BuildPath + relativePath;
+                var relativePath = filePath.Remove(0, settings.SourcePath.Length);
+                var newPath = settings.DestinationPath + relativePath;
                 if (!Directory.Exists(Path.GetDirectoryName(newPath)))
                 {
                     Directory.CreateDirectory(Path.GetDirectoryName(newPath));
@@ -63,14 +65,21 @@ namespace Lumione
                 foreach (var invoker in ReflectiveEnumerator.GetEnumerableOfType<InvokerBase>(settings))
                 {
                     invoker.Context.CurrentFilePath = filePath;
-                    if (invoker.CanInvoke(match.Groups["command"].Value))
+                    try
                     {
-                        var prepend = fileContents.Substring(positionInFile, match.Index);
-                        var invokedContent = invoker.Invoke(match.Groups["command"].Value);
-                        positionInFile += match.Index + match.Length;
+                        if (invoker.CanInvoke(match.Groups["command"].Value))
+                        {
+                            var prepend = fileContents.Substring(positionInFile, match.Index);
+                            var invokedContent = invoker.Invoke(match.Groups["command"].Value);
+                            positionInFile += match.Index + match.Length;
 
-                        processedContent += prepend + invokedContent;
-                        break;
+                            processedContent += prepend + invokedContent;
+                            break;
+                        }
+                    }
+                    catch (ArgumentException)
+                    {
+                        Console.WriteLine($"Command \"{match.Groups["command"]}\" in file \"{filePath}\" is not supported.");
                     }
                 }
             }

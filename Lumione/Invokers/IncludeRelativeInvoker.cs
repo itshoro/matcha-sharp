@@ -13,10 +13,10 @@ namespace Lumione.Invokers
         {
             /*
              * This pattern works on the following inputs:
-             * {% include test.html %}
-             * {% include dir\test.html %}
-             * {% include some\dir\test.html %}
-             * {% include \some\dir\test.html %}
+             * {% include_relative test.html %}
+             * {% include_relative dir\test.html %}
+             * {% include_relative some\dir\test.html %}
+             * {% include_relative \some\dir\test.html %}
              */
             pattern = @"include_relative\s+(?<filePath>(?:\\?(?:\w+\\?)+\.\w+)";
         }
@@ -34,7 +34,7 @@ namespace Lumione.Invokers
             return string.Empty;
         }
 
-        private string FindFileContents(string filePath, string includePath)
+        protected string FindFileContents(string filePath, string includePath)
         {
             if (!includePath.StartsWith("\\"))
             {
