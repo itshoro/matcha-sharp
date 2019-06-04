@@ -1,49 +1,26 @@
-﻿using System.Text.RegularExpressions;
+﻿using System;
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 namespace Lumione.Invokers
 {
-    /// <summary>
-    /// The IncludeInvoker<see cref="IncludeInvoker"/> replaces include statements by inlining the coresponding content from the "_includes" directory.
-    /// This is done by looking up the file path from the given include statement within the directory.
-    /// Warning: Include paths containing "." or ".." are not processed.
-    /// </summary>
-    public class IncludeInvoker : InvokerBase
+    internal class IncludeInvoker : InvokerBase
     {
-        public IncludeInvoker(Settings settings) : base(settings)
+        public IncludeInvoker() : base()
         {
-            /*
-             * This pattern works on the following inputs:
-             * {% include test.html %}
-             * {% include dir\test.html %}
-             * {% include some\dir\test.html %}
-             * {% include \some\dir\test.html %}
-             */
+            targets.Add(FileType.Document);
             pattern = @"include\s+(?<filePath>(?:\\?(?:\w+\\?)+\.\w+))";
         }
 
-        public override string Invoke(string commentIn)
+        public override string Invoke(IProject project, string command)
         {
-            commentIn = commentIn.Replace("/", @"\");
-            if (Regex.IsMatch(commentIn, pattern))
+            var match = Regex.Match(command, pattern);
+
+            if (match.Success && project.HasFile(match.Groups["filePath"].Value, Scope.Include))
             {
-                var match = Regex.Match(commentIn, pattern);
-                var includePath = match.Groups["filePath"].Value;
-
-                return FindFileContents(includePath);
+                return project.GetFileContents(match.Groups["filePath"].Value, Scope.Include);
             }
-            return string.Empty;
-        }
-
-        private string FindFileContents(string includePath)
-        {
-            if (!includePath.StartsWith("\\"))
-            {
-                includePath = "\\" + includePath;
-            }
-
-            var combined = System.IO.Path.Combine(settings.IncludePath + includePath);
-            var fullPath = System.IO.Path.GetFullPath(combined);
-            return System.IO.File.Exists(fullPath) ? System.IO.File.ReadAllText(fullPath) : string.Empty;
+            throw new ArgumentException("File not found.");
         }
     }
 }

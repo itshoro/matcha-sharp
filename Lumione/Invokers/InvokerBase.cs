@@ -1,26 +1,34 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
 namespace Lumione.Invokers
 {
-    public abstract class InvokerBase : IInvoker
+    internal abstract class InvokerBase : IInvoker
     {
+        protected ICollection<FileType> targets;
         protected string pattern;
-        protected Settings settings;
-        public FileContext Context { get; private set; }
 
-        protected InvokerBase(Settings settings)
+        protected InvokerBase()
         {
-            this.settings = settings;
-            Context = new FileContext();
+            targets = new List<FileType>();
         }
 
-        public virtual bool CanInvoke(string command)
+        public virtual bool CanInvoke(FileType type)
         {
+            return targets.Contains(type);
+        }
 
+        protected void AddFileTypeTarget(FileType target)
+        {
+            targets.Add(target);
+        }
+
+        public abstract string Invoke(IProject project, string contents);
+
+        public bool CanInvoke(string command)
+        {
             return Regex.IsMatch(command, pattern);
         }
-
-        public abstract string Invoke(string command);
     }
 }
