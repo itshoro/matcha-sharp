@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace Lumione.Invokers
 {
-    internal abstract class InvokerBase : IInvoker
+    public abstract class InvokerBase : IInvoker
     {
         protected ICollection<FileType> targets;
         protected string pattern;
@@ -24,7 +25,8 @@ namespace Lumione.Invokers
             targets.Add(target);
         }
 
-        public abstract string Invoke(IProject project, string contents);
+        public abstract string Invoke(IProject project, IFileAccess access, string contents);
+        public abstract Task<string> InvokeAsync(IProject project, IFileAccess access, string command);
 
         public bool CanInvoke(string command)
         {

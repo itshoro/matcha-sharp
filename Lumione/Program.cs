@@ -21,29 +21,30 @@ namespace Lumione
 
         private static int Main(string[] args)
         {
-            args = new[] { "init", "-d", @"F:\Development\HTML\Lumione\Lumione\bin\Debug\netcoreapp2.1\test" };
+            // args = new[] { "init", "-d", @"F:\Development\HTML\Lumione\Lumione\bin\Debug\netcoreapp2.1\test" };
+            args = new[] { "build" };
             return Parser.Default.ParseArguments<InitOptions, BuildOptions>(args)
                 .MapResult(
                     (InitOptions opts) =>
                     {
-                        Project project;
+                        LocalProject project;
                         if (!string.IsNullOrEmpty(opts.DestinationPath))
                         {
-                            project = new Project(Environment.CurrentDirectory, opts.DestinationPath);
+                            project = new LocalProject(Environment.CurrentDirectory, opts.DestinationPath);
                         }
                         else
                         {
-                            project = new Project(Environment.CurrentDirectory);
+                            project = new LocalProject(Environment.CurrentDirectory);
                         }
                         project.Prepare();
                         return 0;
                     },
                     (BuildOptions opts) =>
                     {
-                        var project = new Project(Environment.CurrentDirectory);
+                        var project = new LocalProject(Environment.CurrentDirectory);
                         var builder = new ProjectBuilder();
                         var invokers = ReflectiveEnumerator.GetEnumerableOfType<InvokerBase>();
-                        builder.Build(project, invokers);
+                        builder.Build(project, invokers, new FileAccess());
 
                         return 0;
                     },

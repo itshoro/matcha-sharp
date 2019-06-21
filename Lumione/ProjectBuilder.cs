@@ -7,17 +7,17 @@ using System.Text.RegularExpressions;
 
 namespace Lumione
 {
-    internal class ProjectBuilder
+    public class ProjectBuilder
     {
-        public void Build(IProject project, IEnumerable<IInvoker> invokers)
+        public async void BuildAsync(IProject project, IEnumerable<IInvoker> invokers, IFileAccess fileAccess)
         {
             project.PrepareBuild();
 
-            var projectFiles = new List<File>(project.GetFiles()); // Remove unecessary instantiation
+            var projectFiles = project.GetFiles();
 
             foreach (var file in projectFiles)
             {
-                var contents = project.GetFileContents(file);
+                var contents = await fileAccess.ReadAsync(project.GetFilePath(file));
                 var commands = SearchForCommands(contents);
 
                 var invokedContent = new List<string>();
@@ -32,12 +32,14 @@ namespace Lumione
 
                         try
                         {
-                            invokedContent.Add(invoker.Invoke(project, command.Groups["command"].Value));
+                            invokedContent.Add(await invoker.InvokeAsync(project, fileAccess, command.Groups["command"].Value));
                             wasInvoked = true;
                             break;
                         }
                         catch (ArgumentException)
                         {
+                            // Stops the program from breaking if an invokation causes a failure. 
+                            // I want to remove this, so that plugin devs have to be careful themselves.
                         }
                     }
 
@@ -47,36 +49,88 @@ namespace Lumione
                     }
                 }
 
-                FinalizeFile(project, file, contents, commands, invokedContent);
+                var destPath = project.GetDestinationPathOfFile(file);
+                var newContents = ReplaceInvokedContent(contents, commands, invokedContent);
+
+                await fileAccess.WriteAsync(destPath, newContents);
             }
         }
 
-        private void FinalizeFile(IProject project, File file, string contents, IEnumerable<Match> commands, List<string> invokedContent)
+        public void Build(IProject project, IEnumerable<IInvoker> invokers, IFileAccess fileAccess)
+        {
+            project.PrepareBuild();
+
+            var projectFiles = project.GetFiles();
+
+            foreach (var file in projectFiles)
+            {
+                var contents = fileAccess.Read(project.GetFilePath(file));
+                var commands = SearchForCommands(contents);
+
+                var invokedContent = new List<string>();
+
+                foreach (var command in commands)
+                {
+                    var wasInvoked = false;
+                    foreach (var invoker in invokers)
+                    {
+                        if (!invoker.CanInvoke(file.FileType) || !invoker.CanInvoke(command.Groups["command"].Value))
+                            continue;
+
+                        try
+                        {
+                            // TODO: Let Invokers work asynchronous.
+                            invokedContent.Add(invoker.Invoke(project, fileAccess, command.Groups["command"].Value));
+                            wasInvoked = true;
+                            break;
+                        }
+                        catch (ArgumentException)
+                        {
+                            // Stops the program from breaking if an invokation causes a failure. 
+                            // I want to remove this, so that plugin devs have to be careful themselves.
+                        }
+                    }
+
+                    if (!wasInvoked)
+                    {
+                        invokedContent.Add(null);
+                    }
+                }
+
+                var newContents = ReplaceInvokedContent(contents, commands, invokedContent);
+                var destPath = project.GetDestinationPathOfFile(file);
+
+                fileAccess.Write(destPath, newContents);
+            }
+        }
+
+        private string ReplaceInvokedContent(string contents, IEnumerable<Match> matches, IList<string> replacement)
         {
             var i = 0;
-            var start = 0;
-
-            var fileContents = string.Empty;
-            foreach (var match in commands)
+            var position = 0;
+            var sb = new StringBuilder();
+            foreach (var match in matches)
             {
-                if (invokedContent[i] == null)
+                if (replacement[i] == null)
                     continue;
-                var prepend = contents.Substring(start, match.Index);
-                fileContents += prepend;
-                fileContents += invokedContent[i];
-                start += match.Index + match.Length;
+                var prepend = contents.Substring(position, match.Index);
+
+                sb.Append(prepend);
+                sb.Append(replacement[i]);
+
+                position += match.Index + match.Length;
                 i++;
             }
 
-            if (start < contents.Length)
+            if (position < contents.Length)
             {
-                fileContents += contents.Substring(start);
+                sb.Append(contents.Substring(position));
             }
 
-            project.AddToDestination(file, fileContents);
+            return sb.ToString();
         }
 
-        private IEnumerable<Match> SearchForCommands(string fileContents)
+        private IList<Match> SearchForCommands(string fileContents)
         {
             return Regex.Matches(fileContents, @"\<\!\-\-\s*\{\%(?<command>.+)\%}\s*\-\-\>");
         }

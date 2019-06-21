@@ -8,7 +8,7 @@ namespace Lumione
         {
         }
 
-        internal void Setup(Project project)
+        internal void Setup(LocalProject project)
         {
             // project.
         }
