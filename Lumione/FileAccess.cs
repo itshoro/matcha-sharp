@@ -23,7 +23,7 @@ namespace Lumione
 
         public async Task<string> ReadAsync(string path)
         {
-            return await Task.Run(async () => 
+            return await Task.Run(async () =>
             {
                 if (System.IO.File.Exists(path))
                     return await System.IO.File.ReadAllTextAsync(path);
@@ -33,12 +33,37 @@ namespace Lumione
 
         public async Task WriteAsync(string path, string contents)
         {
-            await Task.Run( async() => 
+            await Task.Run(async () =>
+           {
+               if (!System.IO.Directory.Exists(System.IO.Path.GetDirectoryName(path)))
+                   System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path));
+               await System.IO.File.WriteAllTextAsync(path, contents);
+           });
+        }
+
+        public bool FileExists(params string[] files)
+        {
+            foreach (var path in files)
             {
-                if (!System.IO.Directory.Exists(System.IO.Path.GetDirectoryName(path)))
-                    System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path));
-                await System.IO.File.WriteAllTextAsync(path, contents);
-            });
+                if (!System.IO.File.Exists(path))
+                    return false;
+            }
+            return true;
+        }
+
+        public IEnumerable<string> GetFiles(string path)
+        {
+            return System.IO.Directory.GetFiles(path, "*", System.IO.SearchOption.AllDirectories);
+        }
+
+        public bool DirectoryExists(params string[] dirs)
+        {
+            foreach (var path in dirs)
+            {
+                if (!System.IO.File.Exists(path))
+                    return false;
+            }
+            return true;
         }
     }
 }

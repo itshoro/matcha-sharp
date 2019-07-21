@@ -11,7 +11,8 @@ namespace Lumione
     {
         public async void BuildAsync(IProject project, IEnumerable<IInvoker> invokers, IFileAccess fileAccess)
         {
-            project.PrepareBuild();
+            if (!project.IsPrepared(fileAccess))
+                throw new Exception("[Error] Project was not prepared.");
 
             var projectFiles = project.GetFiles();
 
@@ -38,7 +39,7 @@ namespace Lumione
                         }
                         catch (ArgumentException)
                         {
-                            // Stops the program from breaking if an invokation causes a failure. 
+                            // Stops the program from breaking if an invokation causes a failure.
                             // I want to remove this, so that plugin devs have to be careful themselves.
                         }
                     }
@@ -84,10 +85,11 @@ namespace Lumione
                             wasInvoked = true;
                             break;
                         }
-                        catch (ArgumentException)
+                        catch (ArgumentException e)
                         {
-                            // Stops the program from breaking if an invokation causes a failure. 
+                            // Stops the program from breaking if an invokation causes a failure.
                             // I want to remove this, so that plugin devs have to be careful themselves.
+                            invokedContent.Add($"<!-- [{invoker.GetType().Name}] {e.Message} -->");
                         }
                     }
 

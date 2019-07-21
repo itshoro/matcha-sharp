@@ -17,7 +17,7 @@ namespace Lumione.Invokers
         {
             var match = Regex.Match(command, pattern);
 
-            if (match.Success && project.HasFile(match.Groups["filePath"].Value, Scope.Include))
+            if (match.Success && project.HasFile(match.Groups["filePath"].Value, access, Scope.Include))
             {
                 return access.Read(project.GetFilePath(match.Groups["filePath"].Value, Scope.Include));
             }
@@ -27,11 +27,11 @@ namespace Lumione.Invokers
         public override async Task<string> InvokeAsync(IProject project, IFileAccess access, string command)
         {
             var match = Regex.Match(command, pattern);
-            if (match.Success && project.HasFile(match.Groups["filePath"].Value, Scope.Include))
+            if (match.Success && project.HasFile(match.Groups["filePath"].Value, access, Scope.Include))
             {
                 return await access.ReadAsync(project.GetFilePath(match.Groups["filePath"].Value, Scope.Include));
             }
             throw new ArgumentException("File not found.");
         }
     }
-    }
+}

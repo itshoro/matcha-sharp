@@ -16,6 +16,7 @@ namespace LumioneTests
         public string Path { get; set; }
         public bool IsInDestination { get; set; }
     };
+
     internal class DictionaryFileAccess : IFileAccess
     {
         public IDictionary<TestFile, string> fileSystem;
@@ -24,6 +25,32 @@ namespace LumioneTests
         {
             this.fileSystem = fileSystem;
         }
+
+        public bool DirectoryExists(params string[] dirs)
+        {
+            return true;
+        }
+
+        public bool FileExists(params string[] paths)
+        {
+            foreach (var path in paths)
+            {
+                if (!fileSystem.Keys.Select(o => o.Path).Contains(path))
+                    return false;
+            }
+            return true;
+        }
+
+        public IEnumerable<string> GetFiles(string path)
+        {
+            return fileSystem.Keys.Select(o => o.Path);
+        }
+
+        public IEnumerable<string> GetFiles(params string[] path)
+        {
+            throw new NotImplementedException();
+        }
+
         public string Read(string path)
         {
             return fileSystem[fileSystem.Keys.First(o => o.Path == path)];
@@ -44,111 +71,7 @@ namespace LumioneTests
             throw new NotImplementedException();
         }
     }
-    internal class DictionaryProject : IProject
-    {
-        public string BasePath { get; set; }
-        public string StylesPath { get; private set; }
-        public string IncludesPath { get; private set; }
-        public string ScriptsPath { get; private set; }
-        public string AssetsPath { get; private set; }
-        public string DestinationPath { get; set; }
-        public bool destinationIsRelative;
-        public bool putInSubdirectories;
-        private ICollection<Lumione.File> files;
 
-        public DictionaryProject()
-        {
-            files = new List<Lumione.File>();
-            BasePath = string.Empty;
-            DestinationPath = @"\_build";
-            StylesPath = @"\_stylesheet";
-            IncludesPath = @"\_includes";
-            ScriptsPath = @"\_scripts";
-            AssetsPath = @"\_assets";
-        }
-
-        public DictionaryProject(ICollection<Lumione.File> files)
-        {
-            this.files = files;
-            BasePath = string.Empty;
-            DestinationPath = @"\_build";
-            StylesPath = @"\_stylesheet";
-            IncludesPath = @"\_includes";
-            ScriptsPath = @"\_scripts";
-            AssetsPath = @"\_assets";
-        }
-
-        private string GetBaseDirectoryFromFileType (FileType type) 
-        {
-            switch (type) 
-            {
-                case FileType.Asset:
-                    return AssetsPath;
-                case FileType.Script:
-                    return ScriptsPath;
-                case FileType.Stylesheet:
-                    return StylesPath;
-                default:
-                    return string.Empty; // TODO: DO I want to throw here?
-            }
-        }
-
-        public string GetDestinationPathOfFile(Lumione.File file)
-        {
-            var sb = new StringBuilder();
-            sb.Append(destinationIsRelative ? BasePath + DestinationPath : DestinationPath);
-            if (file.FileType != FileType.Document)
-            {
-                sb.Append(GetBaseDirectoryFromFileType(file.FileType));
-            }
-
-            var dirName = System.IO.Path.GetDirectoryName(file.Path);
-            if (!string.IsNullOrEmpty(dirName)) {
-                sb.Append(@"\");
-                sb.Append(System.IO.Path.GetDirectoryName(file.Path));
-
-            }
-
-            if (putInSubdirectories && file.FileType == FileType.Document)
-            {
-                sb.Append(@"\");
-                sb.Append(System.IO.Path.GetFileNameWithoutExtension(file.Path));
-                sb.Append(@"\");
-                sb.Append("index.html");
-            }
-            else
-            {
-                sb.Append(@"\");
-                sb.Append(System.IO.Path.GetFileName(file.Path));
-            }
-            return sb.ToString();
-        }
-
-        public string GetFilePath(Lumione.File file)
-        {
-            return file.Path;
-        }
-
-        public string GetFilePath(string relativePath, Scope scope = Scope.Root)
-        {
-            return relativePath;
-        }
-
-        public IEnumerable<Lumione.File> GetFiles()
-        {
-            return files;
-        }
-
-        public bool HasFile(string path, Scope scope = Scope.Root)
-        {
-            return files.Select(o => o.Path).Contains(path);
-        }
-
-        public void PrepareBuild()
-        {
-            // Do Nothing
-        }
-    }
     [TestClass]
     public class BuildTest
     {
@@ -159,14 +82,14 @@ namespace LumioneTests
         public void TestBuildSingleFileInRootDirectory()
         {
             builder = new ProjectBuilder();
-            var files = new List<Lumione.File>();
+            var files = new List<string>();
             var filesystem = new Dictionary<TestFile, string>();
 
-            files.Add(new Lumione.File("index.html"));
-            filesystem.Add(new TestFile{ Path = "index.html", IsInDestination = false }, "Hello World!");
+            files.Add("index.html");
+            filesystem.Add(new TestFile { Path = "index.html", IsInDestination = false }, "Hello World!");
 
-            var project = new DictionaryProject(files);
             var fileAccess = new DictionaryFileAccess(filesystem);
+            var project = new LocalProject(string.Empty, fileAccess);
             invokers = ReflectiveEnumerator.GetEnumerableOfType<InvokerBase>();
 
             builder.Build(project, invokers, fileAccess);
@@ -174,21 +97,20 @@ namespace LumioneTests
             fileAccess.fileSystem.Keys.Where(o => o.IsInDestination).Count().Should().Be(1);
             fileAccess.fileSystem[fileAccess.fileSystem.Keys.First(o => o.IsInDestination)].Should().Be("Hello World!");
             fileAccess.fileSystem.Keys.First(o => o.IsInDestination).Path.Should().Be(project.DestinationPath + @"\index.html");
-
         }
 
         [TestMethod]
         public void TestBuildSingleFileInSubDirectory()
         {
             builder = new ProjectBuilder();
-            var files = new List<Lumione.File>();
+            var files = new List<string>();
             var filesystem = new Dictionary<TestFile, string>();
 
-            files.Add(new Lumione.File(@"test\index.html"));
-            filesystem.Add(new TestFile{ Path = @"test\index.html", IsInDestination = false }, "Hello World!");
+            files.Add(@"test\index.html");
+            filesystem.Add(new TestFile { Path = @"test\index.html", IsInDestination = false }, "Hello World!");
 
-            var project = new DictionaryProject(files);
             var fileAccess = new DictionaryFileAccess(filesystem);
+            var project = new LocalProject(string.Empty, fileAccess);
             invokers = ReflectiveEnumerator.GetEnumerableOfType<InvokerBase>();
 
             builder.Build(project, invokers, fileAccess);
@@ -202,17 +124,17 @@ namespace LumioneTests
         public void TestBuildFileCanBePutInSubDirectories()
         {
             builder = new ProjectBuilder();
-            var files = new List<Lumione.File>();
+            var files = new List<string>();
             var filesystem = new Dictionary<TestFile, string>();
 
-            files.Add(new Lumione.File(@"test.html"));
-            filesystem.Add(new TestFile{ Path = @"test.html", IsInDestination = false }, "Hello World!");
+            files.Add(@"test.html");
+            filesystem.Add(new TestFile { Path = @"test.html", IsInDestination = false }, "Hello World!");
 
-            var project = new DictionaryProject(files);
             var fileAccess = new DictionaryFileAccess(filesystem);
+            var project = new LocalProject(string.Empty, fileAccess);
             invokers = ReflectiveEnumerator.GetEnumerableOfType<InvokerBase>();
 
-            project.putInSubdirectories = true;
+            project.PutInSubdirectories = true;
 
             builder.Build(project, invokers, fileAccess);
 
@@ -225,18 +147,18 @@ namespace LumioneTests
         public void TestBuildMultipleFilesInRootDirectory()
         {
             builder = new ProjectBuilder();
-            var files = new List<Lumione.File>();
+            var files = new List<string>();
             var filesystem = new Dictionary<TestFile, string>();
 
-            files.Add(new Lumione.File(@"index.html"));
-            files.Add(new Lumione.File(@"index2.html"));
-            files.Add(new Lumione.File(@"index3.html"));
-            filesystem.Add(new TestFile{ Path = @"index.html", IsInDestination = false }, "This is a file.");
-            filesystem.Add(new TestFile{ Path = @"index2.html", IsInDestination = false }, "This is another file.");
-            filesystem.Add(new TestFile{ Path = @"index3.html", IsInDestination = false }, "This is the last file.");
+            files.Add(@"index.html");
+            files.Add(@"index2.html");
+            files.Add(@"index3.html");
+            filesystem.Add(new TestFile { Path = @"index.html", IsInDestination = false }, "This is a file.");
+            filesystem.Add(new TestFile { Path = @"index2.html", IsInDestination = false }, "This is another file.");
+            filesystem.Add(new TestFile { Path = @"index3.html", IsInDestination = false }, "This is the last file.");
 
-            var project = new DictionaryProject(files);
             var fileAccess = new DictionaryFileAccess(filesystem);
+            var project = new LocalProject(string.Empty, fileAccess);
             invokers = ReflectiveEnumerator.GetEnumerableOfType<InvokerBase>();
 
             builder.Build(project, invokers, fileAccess);
@@ -244,12 +166,10 @@ namespace LumioneTests
             fileAccess.fileSystem.Keys.Where(o => o.IsInDestination).Count().Should().Be(3);
             fileAccess.fileSystem[fileAccess.fileSystem.Keys.First(o => o.IsInDestination)].Should().Be("This is a file.");
             fileAccess.fileSystem[fileAccess.fileSystem.Keys.Last(o => o.IsInDestination)].Should().Be("This is the last file.");
-            
-            // var expected = files.ForEach(o => (project.DestinationPath + @"\" + o));
 
-            var relevantFilesFromFilesystem = fileAccess.fileSystem.Keys.Where(o => o.IsInDestination).ToList();
+            var relevantFilesFromFilesystem = fileAccess.fileSystem.Keys.Where(o => o.IsInDestination).ToList().Select(o => o.Path);
+            files = files.Select(o => @"\_build\" + o).ToList();
             relevantFilesFromFilesystem.Should().BeEquivalentTo(files);
-     
         }
     }
 }

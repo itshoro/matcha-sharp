@@ -17,12 +17,15 @@ namespace Lumione
         }
 
         [Verb("build")]
-        private class BuildOptions { }
+        private class BuildOptions
+        {
+            [Option('m', "minify")]
+            public bool Minify { get; set; }
+        }
 
         private static int Main(string[] args)
         {
-            // args = new[] { "init", "-d", @"F:\Development\HTML\Lumione\Lumione\bin\Debug\netcoreapp2.1\test" };
-            args = new[] { "build" };
+            args = new[] { "init", "-d", @"F:\Development\HTML\Lumione\Lumione\bin\Debug\netcoreapp2.1\Miuri" };
             return Parser.Default.ParseArguments<InitOptions, BuildOptions>(args)
                 .MapResult(
                     (InitOptions opts) =>
@@ -30,18 +33,18 @@ namespace Lumione
                         LocalProject project;
                         if (!string.IsNullOrEmpty(opts.DestinationPath))
                         {
-                            project = new LocalProject(Environment.CurrentDirectory, opts.DestinationPath);
+                            project = new LocalProject(Environment.CurrentDirectory, opts.DestinationPath, new FileAccess());
                         }
                         else
                         {
-                            project = new LocalProject(Environment.CurrentDirectory);
+                            project = new LocalProject(Environment.CurrentDirectory, new FileAccess());
                         }
                         project.Prepare();
                         return 0;
                     },
                     (BuildOptions opts) =>
                     {
-                        var project = new LocalProject(Environment.CurrentDirectory);
+                        var project = new LocalProject(Environment.CurrentDirectory, new FileAccess());
                         var builder = new ProjectBuilder();
                         var invokers = ReflectiveEnumerator.GetEnumerableOfType<InvokerBase>();
                         builder.Build(project, invokers, new FileAccess());

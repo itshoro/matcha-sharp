@@ -2,12 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using Lumione.Invokers;
 
 namespace Lumione
 {
-    internal class LocalProject : IProject
+    public class LocalProject : IProject
     {
         public string BasePath { get; private set; }
         public string StylesPath { get; private set; }
@@ -15,12 +13,15 @@ namespace Lumione
         public string ScriptsPath { get; private set; }
         public string AssetsPath { get; private set; }
         public string DestinationPath { get; private set; }
-        private readonly bool destinationIsRelative;
         private ICollection<File> files;
-        private readonly bool putInSubdirectories;
+        public bool PutInSubdirectories { get; set; }
+        public bool DestinationIsRelative { get; private set; }
 
-        private LocalProject() { }
-        public LocalProject(string basePath)
+        private LocalProject()
+        {
+        }
+
+        public LocalProject(string basePath, IFileAccess access)
         {
             BasePath = basePath;
             DestinationPath = @"\_build";
@@ -29,11 +30,11 @@ namespace Lumione
             ScriptsPath = @"\_scripts";
             AssetsPath = @"\_assets";
 
-            destinationIsRelative = true;
-            putInSubdirectories = false;
+            DestinationIsRelative = true;
+            PutInSubdirectories = false;
 
             files = new List<File>();
-            var f = System.IO.Directory.GetFiles(basePath, "*", System.IO.SearchOption.AllDirectories);
+            var f = access.GetFiles(basePath);
             foreach (var file in f)
             {
                 File projectFile = new File(file.Remove(0, BasePath.Length));
@@ -47,7 +48,7 @@ namespace Lumione
             System.IO.Directory.CreateDirectory(BasePath + ScriptsPath);
             System.IO.Directory.CreateDirectory(BasePath + AssetsPath);
             System.IO.Directory.CreateDirectory(BasePath + IncludesPath);
-            if (destinationIsRelative)
+            if (DestinationIsRelative)
             {
                 System.IO.Directory.CreateDirectory(BasePath + DestinationPath);
             }
@@ -57,7 +58,7 @@ namespace Lumione
             }
         }
 
-        public LocalProject(string basePath, string destinationPath)
+        public LocalProject(string basePath, string destinationPath, IFileAccess access)
         {
             BasePath = basePath;
             DestinationPath = destinationPath;
@@ -66,11 +67,11 @@ namespace Lumione
             ScriptsPath = @"\_scripts";
             AssetsPath = @"\_assets";
 
-            destinationIsRelative = false;
-            putInSubdirectories = false;
+            DestinationIsRelative = false;
+            PutInSubdirectories = false;
 
             files = new List<File>();
-            var f = System.IO.Directory.GetFiles(basePath, "*", System.IO.SearchOption.AllDirectories);
+            var f = access.GetFiles(basePath);
             foreach (var file in f)
             {
                 File projectFile = new File(file.Remove(0, BasePath.Length));
@@ -85,7 +86,7 @@ namespace Lumione
 
         public void PrepareBuild()
         {
-            var destinationBase = destinationIsRelative ? BasePath + DestinationPath : DestinationPath;
+            var destinationBase = DestinationIsRelative ? BasePath + DestinationPath : DestinationPath;
 
             System.IO.Directory.CreateDirectory(destinationBase);
             System.IO.Directory.CreateDirectory(destinationBase + StylesPath);
@@ -93,11 +94,11 @@ namespace Lumione
             System.IO.Directory.CreateDirectory(destinationBase + AssetsPath);
         }
 
-        // Todo: This probably belongs into ProjectBuilder.cs 
+        // Todo: This probably belongs into ProjectBuilder.cs
         public string GetDestinationPathOfFile(File file)
         {
             var sb = new StringBuilder();
-            sb.Append(destinationIsRelative ? BasePath + DestinationPath : DestinationPath);
+            sb.Append(DestinationIsRelative ? BasePath + DestinationPath : DestinationPath);
             if (file.FileType != FileType.Document)
             {
                 sb.Append(GetBaseDirectoryFromFileType(file.FileType));
@@ -108,10 +109,9 @@ namespace Lumione
             {
                 sb.Append(@"\");
                 sb.Append(System.IO.Path.GetDirectoryName(file.Path));
-
             }
 
-            if (putInSubdirectories && file.FileType == FileType.Document)
+            if (PutInSubdirectories && file.FileType == FileType.Document)
             {
                 sb.Append(@"\");
                 sb.Append(System.IO.Path.GetFileNameWithoutExtension(file.Path));
@@ -132,14 +132,18 @@ namespace Lumione
             {
                 case FileType.Asset:
                     return AssetsPath;
+
                 case FileType.Script:
                     return ScriptsPath;
+
                 case FileType.Stylesheet:
                     return StylesPath;
+
                 default:
                     return string.Empty; // TODO: DO I want to throw here?
             }
         }
+
         private string GetDirectoryFromScope(Scope scope)
         {
             switch (scope)
@@ -152,11 +156,11 @@ namespace Lumione
             }
         }
 
-        public bool HasFile(string relativePath, Scope scope = Scope.Root)
+        public bool HasFile(string relativePath, IFileAccess access, Scope scope = Scope.Root)
         {
             if (!relativePath.StartsWith(@"\"))
                 relativePath = @"\" + relativePath;
-            return System.IO.File.Exists(BasePath + GetDirectoryFromScope(scope) + relativePath);
+            return access.FileExists(BasePath + GetDirectoryFromScope(scope) + relativePath);
         }
 
         public string GetFilePath(File file)
@@ -174,6 +178,7 @@ namespace Lumione
         public string GetDestinationPathOfFile(string relativePath, Scope scope = Scope.Root)
         {
             // TODO:
+            throw new NotImplementedException();
         }
 
         public Scope GetScope(string value)
@@ -186,6 +191,16 @@ namespace Lumione
             {
                 return Scope.Root;
             }
+        }
+
+        public bool IsPrepared(IFileAccess access)
+        {
+            var destinationBase = DestinationIsRelative ? BasePath + DestinationPath : DestinationPath;
+            return access.DirectoryExists(
+                destinationBase,
+                destinationBase + StylesPath,
+                destinationBase + ScriptsPath,
+                destinationBase + AssetsPath);
         }
     }
 }
