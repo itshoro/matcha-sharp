@@ -10,28 +10,24 @@ namespace Lumione.Invokers
         public IncludeInvoker() : base()
         {
             targets.Add(FileType.Document);
+            reserved.Add(@"includes");
             pattern = @"include\s+(?<filePath>(?:\\?(?:\w+\\?)+\.\w+))";
         }
 
-        public override string Invoke(IProject project, IFileAccess access, string command)
+        public override string Invoke(Project project, Settings settings, IFileAccess access, string command)
         {
             var match = Regex.Match(command, pattern);
 
-            if (match.Success && project.HasFile(match.Groups["filePath"].Value, access, Scope.Include))
+            if (match.Success && project.HasFile(match.Groups["filePath"].Value))
             {
-                return access.Read(project.GetFilePath(match.Groups["filePath"].Value, Scope.Include));
+                return access.ReadFromRoot(project, settings, match.Groups["filePath"].Value);
             }
             throw new ArgumentException("File not found.");
         }
 
-        public override async Task<string> InvokeAsync(IProject project, IFileAccess access, string command)
+        public override async Task<string> InvokeAsync(Project project, Settings settings, IFileAccess access, string command)
         {
-            var match = Regex.Match(command, pattern);
-            if (match.Success && project.HasFile(match.Groups["filePath"].Value, access, Scope.Include))
-            {
-                return await access.ReadAsync(project.GetFilePath(match.Groups["filePath"].Value, Scope.Include));
-            }
-            throw new ArgumentException("File not found.");
+            throw new NotImplementedException();
         }
     }
 }

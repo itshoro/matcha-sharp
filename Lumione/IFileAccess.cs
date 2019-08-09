@@ -8,7 +8,7 @@ namespace Lumione
 {
     public interface IFileAccess
     {
-        string Read(string path);
+        string ReadFromRoot(Project project, Settings settings, string path);
 
         void Write(string path, string contents);
 

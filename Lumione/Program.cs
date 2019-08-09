@@ -3,7 +3,9 @@ using System.IO;
 using System.Threading;
 using CommandLine;
 using Lumione.Invokers;
+using System.Linq;
 using Newtonsoft.Json;
+using System.Collections.Generic;
 
 namespace Lumione
 {
@@ -12,43 +14,44 @@ namespace Lumione
         [Verb("init")]
         private class InitOptions
         {
-            [Option('d', "destination")]
-            public string DestinationPath { get; set; }
+            // [Option('d', "destination")]
+            // public string DestinationPath { get; set; }
         }
 
         [Verb("build")]
         private class BuildOptions
         {
-            [Option('m', "minify")]
-            public bool Minify { get; set; }
+            // [Option('m', "minify")]
+            // public bool Minify { get; set; }
         }
 
         private static int Main(string[] args)
         {
-            args = new[] { "init", "-d", @"F:\Development\HTML\Lumione\Lumione\bin\Debug\netcoreapp2.1\Miuri" };
+            var invokers = ReflectiveEnumerator.GetEnumerableOfType<InvokerBase>();
+            var reserved = new List<string>();
+            foreach (var invoker in invokers)
+            {
+                reserved.AddRange(invoker.ReservedDirectories());
+            }
+
+            Settings settings = new Settings()
+            {
+                CreateSubdirectories = true
+            };
+
+            var project = new Project(new Uri(Environment.CurrentDirectory), new FileAccess(), settings);
+
             return Parser.Default.ParseArguments<InitOptions, BuildOptions>(args)
                 .MapResult(
                     (InitOptions opts) =>
                     {
-                        LocalProject project;
-                        if (!string.IsNullOrEmpty(opts.DestinationPath))
-                        {
-                            project = new LocalProject(Environment.CurrentDirectory, opts.DestinationPath, new FileAccess());
-                        }
-                        else
-                        {
-                            project = new LocalProject(Environment.CurrentDirectory, new FileAccess());
-                        }
-                        project.Prepare();
+                        project.Prepare(settings, reserved);
                         return 0;
                     },
                     (BuildOptions opts) =>
                     {
-                        var project = new LocalProject(Environment.CurrentDirectory, new FileAccess());
                         var builder = new ProjectBuilder();
-                        var invokers = ReflectiveEnumerator.GetEnumerableOfType<InvokerBase>();
-                        builder.Build(project, invokers, new FileAccess());
-
+                        builder.Build(project, settings, reserved, invokers, new FileAccess());
                         return 0;
                     },
                     errors => -1

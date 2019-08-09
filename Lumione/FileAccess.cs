@@ -7,8 +7,10 @@ namespace Lumione
 {
     internal class FileAccess : IFileAccess
     {
-        public string Read(string path)
+        public string ReadFromRoot(Project project, Settings settings, string path)
         {
+            path = project.Uri.AbsolutePath + @"\" + path;
+
             if (System.IO.File.Exists(path))
                 return System.IO.File.ReadAllText(path);
             throw new ArgumentException($"File \"{path}\" was not found.");

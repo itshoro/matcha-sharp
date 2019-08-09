@@ -51,9 +51,9 @@ namespace LumioneTests
             throw new NotImplementedException();
         }
 
-        public string Read(string path)
+        public string ReadFromRoot(Project project, Settings settings, string path)
         {
-            return fileSystem[fileSystem.Keys.First(o => o.Path == path)];
+            return fileSystem[fileSystem.Keys.First(o => o.Path.Remove(0, project.Uri.AbsolutePath.Length) == path)];
         }
 
         public Task<string> ReadAsync(string path)
@@ -75,101 +75,183 @@ namespace LumioneTests
     [TestClass]
     public class BuildTest
     {
+        private List<string> files;
+        private Dictionary<TestFile, string> fileSystem;
+
+        private IEnumerable<InvokerBase> invokers;
         private ProjectBuilder builder;
-        private IEnumerable<IInvoker> invokers;
+        private List<string> reservedDirectories;
+        private Settings settings;
+
+        [TestInitialize]
+        public void Prepare()
+        {
+            files = new List<string>();
+            fileSystem = new Dictionary<TestFile, string>();
+
+            invokers = ReflectiveEnumerator.GetEnumerableOfType<InvokerBase>();
+            builder = new ProjectBuilder();
+            reservedDirectories = new List<string>();
+            foreach (var invoker in invokers)
+            {
+                reservedDirectories.AddRange(invoker.ReservedDirectories());
+            }
+
+            settings = new Settings()
+            {
+                CreateSubdirectories = true
+            };
+        }
+
+        [TestMethod]
+        public void TestBuildDocumentIsBeingBuiltInRootDirectory()
+        {
+            files.Add(@"root\index.html");
+            fileSystem.Add(new TestFile { Path = @"root\index.html", IsInDestination = false }, "Hello World!");
+
+            var fileAccess = new DictionaryFileAccess(fileSystem);
+            var project = new Project(new Uri(@"\", UriKind.Relative), fileAccess, settings);
+
+            builder.Build(project, settings, reservedDirectories, invokers, fileAccess);
+
+            fileAccess.fileSystem.Keys.Where(f => f.IsInDestination).Count().Should().Be(1);
+            fileAccess.fileSystem[fileAccess.fileSystem.Keys.First(f => f.IsInDestination)].Should().Be("Hello World!");
+            fileAccess.fileSystem.Keys.First(f => f.IsInDestination).Path.Should().Be(@"root\deploy\index.html");
+        }
+
+        [TestMethod]
+        public void TestBuildDocumentIsBeingBuiltInSubDirectory()
+        {
+            files.Add(@"root\test\index.html");
+            fileSystem.Add(new TestFile { Path = @"root\test\index.html", IsInDestination = false }, "Hello World!");
+
+            var fileAccess = new DictionaryFileAccess(fileSystem);
+            var project = new Project(new Uri(string.Empty, UriKind.Relative), fileAccess, settings);
+
+            builder.Build(project, settings, reservedDirectories, invokers, fileAccess);
+
+            fileAccess.fileSystem.Keys.Where(f => f.IsInDestination).Count().Should().Be(1);
+            fileAccess.fileSystem[fileAccess.fileSystem.Keys.First(f => f.IsInDestination)].Should().Be("Hello World!");
+            fileAccess.fileSystem.Keys.First(f => f.IsInDestination).Path.Should().Be(@"root\deploy\test\index.html");
+        }
+
+        [TestMethod]
+        public void TestBuildStylesheetIsBeingBuiltInSubDirectory()
+        {
+            files.Add(@"root\style.css");
+            fileSystem.Add(new TestFile { Path = @"root\style.css", IsInDestination = false }, "Hello World!");
+
+            var fileAccess = new DictionaryFileAccess(fileSystem);
+            var project = new Project(new Uri(string.Empty, UriKind.Relative), fileAccess, settings);
+
+            builder.Build(project, settings, reservedDirectories, invokers, fileAccess);
+
+            fileAccess.fileSystem.Keys.Where(f => f.IsInDestination).Count().Should().Be(1);
+            fileAccess.fileSystem[fileAccess.fileSystem.Keys.First(f => f.IsInDestination)].Should().Be("Hello World!");
+            fileAccess.fileSystem.Keys.First(f => f.IsInDestination).Path.Should().Be(@"root\deploy\css\style.css");
+        }
+
+        [TestMethod]
+        public void TestBuildStylesheetIsBeingBuiltInRootDirectory()
+        {
+            files.Add(@"root\test\index.html");
+            fileSystem.Add(new TestFile { Path = @"root\test\index.html", IsInDestination = false }, "Hello World!");
+
+            var fileAccess = new DictionaryFileAccess(fileSystem);
+            var project = new Project(new Uri(string.Empty, UriKind.Relative), fileAccess, settings);
+
+            builder.Build(project, settings, reservedDirectories, invokers, fileAccess);
+
+            fileAccess.fileSystem.Keys.Where(f => f.IsInDestination).Count().Should().Be(1);
+            fileAccess.fileSystem[fileAccess.fileSystem.Keys.First(f => f.IsInDestination)].Should().Be("Hello World!");
+            fileAccess.fileSystem.Keys.First(f => f.IsInDestination).Path.Should().Be(@"root\deploy\test\index.html");
+        }
 
         [TestMethod]
         public void TestBuildSingleFileInRootDirectory()
         {
-            builder = new ProjectBuilder();
-            var files = new List<string>();
-            var filesystem = new Dictionary<TestFile, string>();
+            files.Add(@"root\index.html");
+            fileSystem.Add(new TestFile { Path = @"root\index.html", IsInDestination = false }, "Hello World!");
 
-            files.Add("index.html");
-            filesystem.Add(new TestFile { Path = "index.html", IsInDestination = false }, "Hello World!");
+            var fileAccess = new DictionaryFileAccess(fileSystem);
+            var project = new Project(new Uri(string.Empty, UriKind.Relative), fileAccess, settings);
 
-            var fileAccess = new DictionaryFileAccess(filesystem);
-            var project = new LocalProject(string.Empty, fileAccess);
-            invokers = ReflectiveEnumerator.GetEnumerableOfType<InvokerBase>();
-
-            builder.Build(project, invokers, fileAccess);
+            builder.Build(project, settings, reservedDirectories, invokers, fileAccess);
 
             fileAccess.fileSystem.Keys.Where(o => o.IsInDestination).Count().Should().Be(1);
             fileAccess.fileSystem[fileAccess.fileSystem.Keys.First(o => o.IsInDestination)].Should().Be("Hello World!");
-            fileAccess.fileSystem.Keys.First(o => o.IsInDestination).Path.Should().Be(project.DestinationPath + @"\index.html");
+            fileAccess.fileSystem.Keys.First(o => o.IsInDestination).Path.Should().Be(@"\" + settings.DestinationFolderName + @"\index.html");
         }
 
         [TestMethod]
         public void TestBuildSingleFileInSubDirectory()
         {
-            builder = new ProjectBuilder();
-            var files = new List<string>();
-            var filesystem = new Dictionary<TestFile, string>();
-
             files.Add(@"test\index.html");
-            filesystem.Add(new TestFile { Path = @"test\index.html", IsInDestination = false }, "Hello World!");
+            fileSystem.Add(new TestFile { Path = @"root\test\index.html", IsInDestination = false }, "Hello World!");
+            var fileAccess = new DictionaryFileAccess(fileSystem);
 
-            var fileAccess = new DictionaryFileAccess(filesystem);
-            var project = new LocalProject(string.Empty, fileAccess);
-            invokers = ReflectiveEnumerator.GetEnumerableOfType<InvokerBase>();
+            var project = new Project(new Uri(string.Empty, UriKind.Relative), fileAccess, settings);
 
-            builder.Build(project, invokers, fileAccess);
+            builder.Build(project, settings, reservedDirectories, invokers, fileAccess);
 
             fileAccess.fileSystem.Keys.Where(o => o.IsInDestination).Count().Should().Be(1);
             fileAccess.fileSystem[fileAccess.fileSystem.Keys.First(o => o.IsInDestination)].Should().Be("Hello World!");
-            fileAccess.fileSystem.Keys.First(o => o.IsInDestination).Path.Should().Be(project.DestinationPath + @"\test\index.html");
+            fileAccess.fileSystem.Keys.First(o => o.IsInDestination).Path.Should().Be(@"\" + settings.DestinationFolderName + @"\test\index.html");
         }
 
         [TestMethod]
         public void TestBuildFileCanBePutInSubDirectories()
         {
-            builder = new ProjectBuilder();
-            var files = new List<string>();
-            var filesystem = new Dictionary<TestFile, string>();
+            var fileAccess = new DictionaryFileAccess(fileSystem);
+            files.Add(@"root\test.html");
+            fileSystem.Add(new TestFile { Path = @"root\test.html", IsInDestination = false }, "Hello World!");
+            var project = new Project(new Uri(string.Empty, UriKind.Relative), fileAccess, settings);
 
-            files.Add(@"test.html");
-            filesystem.Add(new TestFile { Path = @"test.html", IsInDestination = false }, "Hello World!");
+            builder.Build(project, settings, reservedDirectories, invokers, fileAccess);
 
-            var fileAccess = new DictionaryFileAccess(filesystem);
-            var project = new LocalProject(string.Empty, fileAccess);
-            invokers = ReflectiveEnumerator.GetEnumerableOfType<InvokerBase>();
-
-            project.PutInSubdirectories = true;
-
-            builder.Build(project, invokers, fileAccess);
+            Uri uri = new Uri(string.Empty, UriKind.Relative);
 
             fileAccess.fileSystem.Keys.Where(o => o.IsInDestination).Count().Should().Be(1);
             fileAccess.fileSystem[fileAccess.fileSystem.Keys.First(o => o.IsInDestination)].Should().Be("Hello World!");
-            fileAccess.fileSystem.Keys.First(o => o.IsInDestination).Path.Should().Be(project.DestinationPath + @"\test\index.html");
+            fileAccess.fileSystem.Keys.First(o => o.IsInDestination).Path.Should().Be(@"\" + settings.DestinationFolderName + @"\test\index.html");
         }
 
         [TestMethod]
         public void TestBuildMultipleFilesInRootDirectory()
         {
-            builder = new ProjectBuilder();
-            var files = new List<string>();
-            var filesystem = new Dictionary<TestFile, string>();
+            var fileAccess = new DictionaryFileAccess(fileSystem);
+            files.Add(@"root\index.html");
+            files.Add(@"root\index2.html");
+            files.Add(@"root\index3.html");
+            fileSystem.Add(new TestFile { Path = @"root\index.html", IsInDestination = false }, "This is a file.");
+            fileSystem.Add(new TestFile { Path = @"root\index2.html", IsInDestination = false }, "This is another file.");
+            fileSystem.Add(new TestFile { Path = @"root\index3.html", IsInDestination = false }, "This is the last file.");
+            var project = new Project(new Uri(string.Empty, UriKind.Relative), fileAccess, settings);
 
-            files.Add(@"index.html");
-            files.Add(@"index2.html");
-            files.Add(@"index3.html");
-            filesystem.Add(new TestFile { Path = @"index.html", IsInDestination = false }, "This is a file.");
-            filesystem.Add(new TestFile { Path = @"index2.html", IsInDestination = false }, "This is another file.");
-            filesystem.Add(new TestFile { Path = @"index3.html", IsInDestination = false }, "This is the last file.");
-
-            var fileAccess = new DictionaryFileAccess(filesystem);
-            var project = new LocalProject(string.Empty, fileAccess);
-            invokers = ReflectiveEnumerator.GetEnumerableOfType<InvokerBase>();
-
-            builder.Build(project, invokers, fileAccess);
+            builder.Build(project, settings, reservedDirectories, invokers, fileAccess);
 
             fileAccess.fileSystem.Keys.Where(o => o.IsInDestination).Count().Should().Be(3);
             fileAccess.fileSystem[fileAccess.fileSystem.Keys.First(o => o.IsInDestination)].Should().Be("This is a file.");
             fileAccess.fileSystem[fileAccess.fileSystem.Keys.Last(o => o.IsInDestination)].Should().Be("This is the last file.");
 
             var relevantFilesFromFilesystem = fileAccess.fileSystem.Keys.Where(o => o.IsInDestination).ToList().Select(o => o.Path);
-            files = files.Select(o => @"\_build\" + o).ToList();
+            files = files.Select(o => @"\" + settings.DestinationFolderName + @"\" + Path.GetFileNameWithoutExtension(o) + @"\index.html").ToList();
+            files[0] = @"root\deploy\index.html";
             relevantFilesFromFilesystem.Should().BeEquivalentTo(files);
+        }
+
+        [TestMethod]
+        public void TestFilesInAReservedFolderAreNotBeingMovedToTheDeployFolder()
+        {
+            var fileAccess = new DictionaryFileAccess(fileSystem);
+            files.Add(@"root\includes\test.html");
+
+            fileSystem.Add(new TestFile { Path = @"root\includes\test.html", IsInDestination = false }, "This is the index file.");
+            var project = new Project(new Uri(string.Empty, UriKind.Relative), fileAccess, settings);
+
+            builder.Build(project, settings, reservedDirectories, invokers, fileAccess);
+
+            fileAccess.fileSystem.Keys.Where(o => o.IsInDestination).Count().Should().Be(0);
         }
     }
 }
