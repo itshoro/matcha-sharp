@@ -39,7 +39,7 @@ namespace Lumione
                 CreateSubdirectories = true
             };
 
-            var project = new Project(new Uri(Environment.CurrentDirectory), new FileAccess(), settings);
+            var project = new Project(Environment.CurrentDirectory, new FileAccess(), settings);
 
             return Parser.Default.ParseArguments<InitOptions, BuildOptions>(args)
                 .MapResult(

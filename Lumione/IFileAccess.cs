@@ -16,7 +16,7 @@ namespace Lumione
 
         Task<string> ReadAsync(string path);
 
-        IEnumerable<string> GetFiles(string path);
+        IEnumerable<string> GetFiles(string path, Settings settings);
 
         bool FileExists(params string[] path);
 

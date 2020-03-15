@@ -1,45 +1,32 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.IO;
 
 namespace Lumione
 {
     public class Project
     {
-        public List<File> Files { get; private set; }
+        public IEnumerable<File> Files { get; private set; }
         public int FileCount { get { return (Files as ICollection<File>).Count; } }
-        public Uri Uri { get; private set; }
+        public string Directory { get; private set; }
 
         private Project()
         {
         }
 
-        public Project(Uri uri, IFileAccess access, Settings settings)
+        public Project(string path, IFileAccess access, Settings settings)
         {
-            Uri = uri;
+            IEnumerable<File> generateProjectFiles(IEnumerable<string> applicableFilePaths)
+            {
+                foreach (var filePath in applicableFilePaths)
+                    yield return new File(filePath);
+            };
+
+            Directory = path;
             Files = new List<File>();
 
-            var f = uri.IsAbsoluteUri ? access.GetFiles(Uri.AbsolutePath) : access.GetFiles(Uri.LocalPath);
-
-            if (!settings.HasAbsoluteDestinationPath)
-            {
-                foreach (var file in f)
-                {
-                    File projectFile = new File(file.Remove(0, Uri.AbsolutePath.Length));
-                    Files.Add(projectFile);
-                }
-            }
-            else
-            {
-                foreach (var file in f)
-                {
-                    if (!file.StartsWith(settings.DestinationPath))
-                    {
-                        File projectFile = new File(file.Remove(0, Uri.AbsolutePath.Length));
-                        Files.Add(projectFile);
-                    }
-                }
-            }
+            Files = generateProjectFiles(access.GetFiles(Directory, settings));
         }
 
         public IEnumerable<File> GetCompilableFiles(IEnumerable<string> reservedDirectories)
@@ -53,16 +40,12 @@ namespace Lumione
 
         public void Prepare(Settings settings, IEnumerable<string> reservedDirectories)
         {
-            if (!settings.HasAbsoluteDestinationPath)
-            {
-                System.IO.Directory.CreateDirectory(Uri.AbsolutePath + @"\" + settings.DestinationFolderName);
-            }
-            System.IO.Directory.CreateDirectory(Uri.AbsolutePath + @"\" + settings.AssetsFolderName);
-            System.IO.Directory.CreateDirectory(Uri.AbsolutePath + @"\" + settings.CssFolderName);
-            System.IO.Directory.CreateDirectory(Uri.AbsolutePath + @"\" + settings.JavascriptFolderName);
+            System.IO.Directory.CreateDirectory(System.IO.Path.Join(Directory, settings.AssetsFolderName));
+            System.IO.Directory.CreateDirectory(System.IO.Path.Join(Directory, settings.CssFolderName));
+            System.IO.Directory.CreateDirectory(System.IO.Path.Join(Directory, settings.JavascriptFolderName));
             foreach (var reserved in reservedDirectories)
             {
-                System.IO.Directory.CreateDirectory(Uri.AbsolutePath + @"\" + reserved);
+                System.IO.Directory.CreateDirectory(System.IO.Path.Join(Directory, reserved));
             }
         }
 

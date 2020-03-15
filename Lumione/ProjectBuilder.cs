@@ -72,9 +72,7 @@ namespace Lumione
 
         private void InitializeRelativeUris(Project project, Settings settings)
         {
-            destinationBaseUri = settings.HasAbsoluteDestinationPath ?
-                new Uri(settings.DestinationPath) :
-                new Uri(project.Uri, new Uri(settings.DestinationFolderName, UriKind.Relative));
+            destinationBaseUri = new Uri(System.IO.Path.Join(project.Directory, settings.DestinationFolderName));
 
             destinationCssUri = new Uri(destinationBaseUri, new Uri(settings.CssFolderName, UriKind.Relative));
             destinationJsUri = new Uri(destinationBaseUri, new Uri(settings.JavascriptFolderName, UriKind.Relative));
@@ -116,6 +114,10 @@ namespace Lumione
                 case FileType.Stylesheet:
                     uri = destinationCssUri;
                     break;
+
+                default:
+                    uri = destinationBaseUri;
+                    break;
             }
 
             PathBuilder.Clear();
@@ -126,6 +128,7 @@ namespace Lumione
             {
                 PathBuilder.Append(@"\");
                 PathBuilder.Append(baseDirectory);
+                uri = new Uri(uri, baseDirectory);
             }
 
             var relativePath = Path.GetDirectoryName(file.Path);

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace Lumione
 {
@@ -9,7 +10,7 @@ namespace Lumione
     {
         public string ReadFromRoot(Project project, Settings settings, string path)
         {
-            path = project.Uri.AbsolutePath + @"\" + path;
+            path = System.IO.Path.Join(project.Directory, path);
 
             if (System.IO.File.Exists(path))
                 return System.IO.File.ReadAllText(path);
@@ -53,9 +54,13 @@ namespace Lumione
             return true;
         }
 
-        public IEnumerable<string> GetFiles(string path)
+        public IEnumerable<string> GetFiles(string path, Settings settings)
         {
-            return System.IO.Directory.GetFiles(path, "*", System.IO.SearchOption.AllDirectories);
+            var destinationPath = System.IO.Path.Join(path, settings.DestinationFolderName);
+
+            return System.IO.Directory.GetFiles(path, "*", System.IO.SearchOption.AllDirectories)
+                .Where(file => !file.StartsWith(destinationPath))
+                .Select(file => file.Remove(0, path.Length));
         }
 
         public bool DirectoryExists(params string[] dirs)
